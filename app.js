@@ -7,24 +7,21 @@ const db=mysql.createConnection({
    host:'127.0.0.1',
    port:3306,
     user:'root',
-    password:'',
-    database:'ajuba'
-});
-const db1=mysql.createConnection({
-   host:'127.0.0.1',
-   port:3306,
-    user:'root',
-    password:'',
-    database:'raj'
+    password:''
+    
 });
 
 
-var mongoose = require('mongoose');
-var url = 'mongodb://127.0.0.1:27017/';
+
+
+
+
 
 // ******************************
 const app=express();
+
 app.use(bodyParser.json());
+
 // ******************************
 
 const postRoute=require('./routes/School1');
@@ -34,17 +31,6 @@ createTables()
 app.use('/Ajuba',ajubaRoute);
 
 
-//app.use('/School1',postRoute);
-
-
-
-/*mongoose.connect(url,
-    {useNewUrlParser:true,
-        useUnifiedTopology: true,
-        useFindAndModify: false },
-    () => 
-console.log("Connected to MongoDB")
-);*/
 
 
 
@@ -57,10 +43,18 @@ app.listen(1234,function(err){
 
 
 function createTables(){
-    let sql="CREATE TABLE orders (OID int PRIMARY KEY AUTO_INCREMENT,phone varchar(12),houseName varchar(255),streetAddress varchar(255),latitude float ,longitude float),contents varchar(255),price int ,address int,date varchar(25),predeliveryBoy int,deliveryBoy int,status varchar(3) )"
+    db.query(`CREATE DATABASE ajuba `,(err,result)=>{
+        if(err) console.log(err+"Table already exist")
+        else
+        console.log("Created")
+        
+
+    })
+    db.query(`USE ajuba`)
+    let sql="CREATE TABLE orders (OID int PRIMARY KEY AUTO_INCREMENT,phone varchar(12),houseName varchar(255),streetAddress varchar(255),latitude float ,longitude float,contents varchar(255),price int ,address int,date varchar(25),predeliveryBoy int,deliveryBoy int,status varchar(3) )"
     db.query(sql,(err,result)=>{
         if(err)
-        console.log("Table already exist")
+        console.log(err)
         else
         console.log("Created")
     })
@@ -87,7 +81,7 @@ function createTables(){
         else
         console.log("Created")
     })
-    sql="CREATE TABLE admin (ADMINID int PRIMARY KEY  ,registrationToken varchar(255),phone varchar(12),latitude float,longitude float,dist1 float,dist2 float ,dist3 float,price1 float,price2 float,price3 float,minimumDistance float,minimumPrice float )"
+    sql="CREATE TABLE admin (ADMINID INT PRIMARY KEY DEFAULT 0 ,registrationToken varchar(255),phone varchar(12),latitude float,longitude float,dist1 float,dist2 float ,dist3 float,price1 float,price2 float,price3 float,minimumDistance float,minimumPrice float )"
     db.query(sql,(err,result)=>{
         if(err)
         console.log("Table already exist")

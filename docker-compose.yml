@@ -1,0 +1,18 @@
+version: "3.7"
+services:
+  
+  sql-server-db:
+    container_name: sql-server-db
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    ports:
+      - "1433:1433"
+    environment:
+      SA_PASSWORD: "gkb28285656"
+      ACCEPT_EULA: "Y"
+
+  # node-api:
+  #   build: .
+  #   command: npm start
+
+  #   ports: 
+  #     - "1234:1234"  
