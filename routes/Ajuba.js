@@ -75,6 +75,7 @@ function notificationAdmin(title,body){
     
 }
 function notifyCustomer(title,body,token){
+    console.log("notifyCutomer Token")
     console.log(token)
 
     const m={
@@ -82,13 +83,8 @@ function notifyCustomer(title,body,token){
             title:title,
             body:body
         },
-        token:token,
-        android: {
-            notification: {
-                sound: "alert.mp3",
-                channel_id:'AjubaRider_notification_id'
-            }
-        }
+        token:token
+        
     };
     sendPushNotification(m);
 
@@ -213,7 +209,8 @@ router.post('/customer/:phone/:registrationToken',async(req,res)=>{
                })
            }
            else{
-               db.query(`INSERT INTO customer (phone,registrationToken) VALUES("${req.params.phone}","${req.params.registrationToken}")`,(err2,result2)=>{
+               db.query(`INSERT INTO customer (phone,registrationToken,successCount,successPrice,failureCount,failurePrice)
+                VALUES("${req.params.phone}","${req.params.registrationToken}",0,0,0,0)`,(err2,result2)=>{
                 if(err2) {res.send({message:"ERROR"})
                     console.log(err2)
             }
@@ -292,7 +289,7 @@ router.post('/placeOrder/:phone',async(req,res)=>{
 
 
 
-       
+            
     
             db.query(`INSERT INTO orders(contents,phone,price,date,status,houseName,streetAddress,latitude,longitude)
              VALUES ("${req.body.contents}","${req.params.phone}",
@@ -428,10 +425,17 @@ router.post('/acceptOrder/:id',async(req,res)=>{
                 res.send({message:"ERROR"})
             }
             else {
-                db.query(`SELECT * FROM orders WHERE OID=${req.params.id}`,(err,result)=>{
+                db.query(`SELECT * FROM orders WHERE OID=${req.params.id}`,(err1,result1)=>{
                     if(err) res.send({message:"ERROR"})
                     else{
-                        notifyCustomer("Order out for delivery.",`Your order containing ${result.contents} is out for delivery. `)
+                        
+                        db.query(`SELECT * FROM customer WHERE phone="${result1[0].phone}"`,(err2,result2)=>{
+                            console.log("result")
+                            console.log(result1)
+                            console.log(result2)
+                            notifyCustomer("Order out for delivery.",`Your order containing ${result1[0].contents} is out for delivery. `,result2[0].registrationToken)
+                        })
+                        
                     }
                 })
                 notifyRiders()
@@ -453,10 +457,15 @@ router.post('/processOrder/:id',async(req,res)=>{
                 res.send({message:"ERROR"})
             }
             else {
-                db.query(`SELECT * FROM orders WHERE OID=${req.params.id}`,(err,result)=>{
+                db.query(`SELECT * FROM orders WHERE OID=${req.params.id}`,(err1,result1)=>{
                     if(err) res.send({message:"ERROR"})
                     else{
-                        notifyCustomer("Order accepted.",`Your order containing ${result.contents} has been accepted. `)
+                        
+                        db.query(`SELECT * FROM customer WHERE phone="${result1[0].phone}"`,(err2,result2)=>{
+                            
+                            notifyCustomer("Order out for delivery.",`Your order containing ${result1[0].contents} is out for delivery. `,result2[0].registrationToken)
+                        })
+                        
                     }
                 })
                 
@@ -800,11 +809,14 @@ router.post('/rider/:phone/id/:id/accepted',async(req,res)=>{
 router.post('/rider/phone/:phone/id/:id/delivered',async(req,res)=>{
     try{
 
-
-        db.query(`UPDATE orders SET status="C" WHERE OID= ${req.params.id}`,(err,result)=>{
+        db.query(`SELECT * FROM orders WHERE OID= ${req.params.id}`,(err,result)=>{
+            db.query(`UPDATE customer SET successCount=successCount+1,successPrice=successPrice+${result[0].price} WHERE phone=${result[0].phone}`)
+        
+        db.query(`UPDATE orders SET status="C" WHERE OID= ${req.params.id}`,(err,result1)=>{
+            console.log(result1)
             if(err) res.send({message:"ERROR"})
             else res.send({message:"SUCCESS"});
-        })
+        })})
         
         
         
@@ -817,13 +829,17 @@ router.post('/rider/phone/:phone/id/:id/delivered',async(req,res)=>{
 router.post('/rider/:phone/:id/declined',async(req,res)=>{
     try{ 
 
+        db.query(`SELECT * FROM orders WHERE OID= ${req.params.id}`,(err,result)=>{
+            db.query(`UPDATE customer SET failureCount=failureCount+1,failurePrice=failurePrice+${result[0].price} WHERE phone=${result[0].phone}`)
+        
+
         db.query(`UPDATE orders SET status="D" WHERE OID= ${req.params.id}`,(err,result)=>{
             if(err) res.send({message:"ERROR"})
             else {
                 notificationAdmin("Order Failed",`Order to be delivered by ${req.params.phone} was fake.`);
                 res.send({message:"SUCCESS"});}
         })
-       
+    })
     }
     catch(err){
         res.send({message:"ERROR"})
