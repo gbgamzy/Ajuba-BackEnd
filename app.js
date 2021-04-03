@@ -51,7 +51,7 @@ function createTables(){
 
     })
     db.query(`USE ajuba`)
-    let sql="CREATE TABLE orders (OID int PRIMARY KEY AUTO_INCREMENT,phone varchar(12),houseName varchar(255),streetAddress varchar(255),latitude float ,longitude float,contents varchar(255),price int ,address int,date varchar(25),predeliveryBoy int,deliveryBoy int,status varchar(3) )"
+    let sql="CREATE TABLE orders (OID int PRIMARY KEY AUTO_INCREMENT,phone varchar(12),houseName varchar(255),streetAddress varchar(255),latitude float ,longitude float,contents varchar(255),price int ,date varchar(25),deliveryBoy int,status varchar(3) )"
     db.query(sql,(err,result)=>{
         if(err)
         console.log(err)
@@ -88,7 +88,7 @@ function createTables(){
         else
         console.log("Created")
     })
-    sql="CREATE TABLE customer (CustID int PRIMARY KEY AUTO_INCREMENT,registrationToken varchar(255),phone varchar(12))"
+    sql="CREATE TABLE customer (CustID int PRIMARY KEY AUTO_INCREMENT,registrationToken varchar(255),phone varchar(12),successCount int,successPrice int,failureCount int,failurePrice int)"
     db.query(sql,(err,result)=>{
         if(err)
         console.log("Table already exist")
