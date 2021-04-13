@@ -1,6 +1,8 @@
 const express=require('express');
 const bodyParser=require('body-parser');
 const mysql=require('mysql');
+const fs = require('fs');
+const path = require('path');
 // ******************************
 
 const db=mysql.createConnection({
@@ -10,9 +12,17 @@ const db=mysql.createConnection({
     password:''
     
 });
+// ******************************
+fs.mkdir(path.join(__dirname, 'uploads'), (err) => {
+    if (err) {
+        console.log("directory exists")
+    }
+    else{
+    console.log('Directory created successfully!');}
+});
 
 
-
+// ******************************
 
 
 
@@ -24,7 +34,7 @@ app.use(bodyParser.json());
 
 // ******************************
 
-const postRoute=require('./routes/School1');
+//const postRoute=require('./routes/School1');
 const ajubaRoute=require('./routes/Ajuba');
 createTables()
 

@@ -400,13 +400,13 @@ router.delete('/admin/rider',async(req,res)=>{
 
 router.get('/admin/getDetails/:phone',async(req,res)=>{
     try{
-        db.query(`SELECT * FROM orders WHERE phone="${req.params.phone}"`,(err,result)=>{
+        db.query(`SELECT * FROM customer WHERE phone="${req.params.phone}"`,(err,result)=>{
             if(err){
                 res.send({message:"ERROR"})
 
             }
             else{
-                res.send(result);
+                res.send(result[0]);
             }
         })
         
