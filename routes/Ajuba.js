@@ -184,7 +184,7 @@ router.get('/images/:img_id',async (req,res)=>{
 router.get('/getAdmin',async(req,res)=>{
     try{
         db.query("SELECT * FROM admin",(err,result,fields)=>{
-            if(err) throw err;
+            if(err) console.log(err);
             console.log(result[0])
             res.send(result[0])
         })
@@ -240,7 +240,7 @@ router.get('/customer/menu',async(req,res)=>{
     try{
         
         db.query(`SELECT * FROM food_menu`,(err,result)=>{
-            if(err) throw err;
+            if(err) console.log(err);
             res.send(result);
         })
     }
@@ -251,7 +251,7 @@ router.get('/customer/menu',async(req,res)=>{
 
 router.get('/customer/food',async(req,res)=>{
     db.query(`SELECT * FROM food_unit`,(err,result)=>{
-        if(err) throw err;
+        if(err) console.log(err);
         res.send(result);
     })
 })
@@ -260,7 +260,7 @@ router.get('/customer/:phone/orders',async(req,res)=>{
         db.query(`SELECT orders.contents AS contents,orders.OID AS OID ,orders.price AS price,orders.date AS date,orders.status AS status,
         delivery_boy.phone AS deliveryBoyPhone FROM orders LEFT JOIN delivery_boy ON orders.deliveryBoy=delivery_boy.DbID
         WHERE orders.phone = "${req.params.phone}"`,(err,result)=>{
-            if(err) throw err;
+            if(err) console.log(err);
             res.send(result)
         })
 
@@ -273,7 +273,7 @@ router.get('/customer/:phone/orders',async(req,res)=>{
 router.get('/customer/rider/:phone',async (req,res)=>{
     try{
         db.query(`SELECT *FROM delivery_boy WHERE phone = "${req.params.phone}"`,(err,result)=>{
-            if(err) throw err;
+            if(err) console.log(err);
 
             console.log(result[0])
             res.send(result[0])
@@ -322,7 +322,7 @@ router.post('/admin/:phone/:registrationToken',async(req,res)=>{
             }
             else if(r[0].phone!=null){
                 db.query(`UPDATE admin SET registrationToken="${req.params.registrationToken}" WHERE phone = "${req.params.phone}"`,(err,result)=>{
-                    if(err) throw err;
+                    if(err) console.log(err);
             
                     else  res.send({message:"SUCCESS"});
             
@@ -353,7 +353,7 @@ router.post('/admin/:phone/:registrationToken',async(req,res)=>{
 router.post('/admin/phone',async(req,res)=>{
     try{
     db.query(`UPDATE admin SET phone = ${req.body.phone} WHERE phone = ${req.body.oldPhone} `,(err,result)=>{
-        if(err) throw err;
+        if(err) console.log(err);
             console.log(result)
     })
         res.send({message:"SUCCESS"});
@@ -591,7 +591,7 @@ router.post('/admin/foodMenu/category/:category',async(req,res)=>{
     try{
         db.query(`INSERT INTO food_menu(category) VALUES
          ("${req.params.category}")`,(err,result)=>{
-            if(err) throw err;
+            if(err) console.log(err);
             else{
                 res.status(200).send("SUCCESS");        
             }
@@ -607,10 +607,10 @@ router.delete('/admin/foodMenu/category/:category',async(req,res)=>{
 
     try{
         db.query(`DELETE FROM food_menu WHERE category="${req.params.category}"`,(err,result)=>{
-            if(err) throw err;
+            if(err) console.log(err);
             else{
                 db.query(`SELECT image FROM food_unit WHERE category="${req.params.category}"`,(err2,result2)=>{
-                    if(err2) throw err2;
+                    if(err2) console.log(err2);
                     else{try{
                         
                         result2.forEach(element => {
@@ -623,7 +623,7 @@ router.delete('/admin/foodMenu/category/:category',async(req,res)=>{
                     }
                 })
                 db.query(`DELETE FROM food_unit WHERE category="${req.params.category}"`,(err1,result1)=>{
-                    if(err1) throw err1;
+                    if(err1) console.log(err1);
                     else{res.send({message:"SUCCESS"})}
                 })
             }
@@ -644,7 +644,7 @@ router.post('/admin/foodMenu/:category/food',async(req,res)=>{
         db.query(`INSERT INTO food_unit(name,price,image,category) VALUES (
             "${req.body.name}",${req.body.price},"${req.body.image}","${req.params.category}"
         )`,(err,result)=>{
-            if(err) throw err;
+            if(err) console.log(err);
             else{
                 res.status(200).send({message:"SUCCESS"})        
             }
@@ -677,7 +677,7 @@ router.delete('/admin/foodMenu/:category/food/:name',async(req,res)=>{
 
 router.get('/admin/prices',async(req,res)=>{
     db.query(`SELECT * FROM admin `,(err,result)=>{
-        if(err) throw err;
+        if(err) console.log(err);
         else{res.send(result[0])}
     })
 })
@@ -686,7 +686,7 @@ router.post('/admin/prices',async(req,res)=>{
     db.query(`UPDATE admin SET dist1=${req.body.dist1},dist2=${req.body.dist2},dist3=${req.body.dist3},
     price1=${req.body.price1},price2=${req.body.price2},price3=${req.body.price3},minimumDistance=${req.body.minimumDistance}
     ,minimumPrice=${req.body.minimumPrice} WHERE ADMINID = 0`,(err,result)=>{
-        if(err) throw err;
+        if(err) console.log(err);
         else{res.send({message:"SUCCESS"})}
     })
     
@@ -694,14 +694,14 @@ router.post('/admin/prices',async(req,res)=>{
 
 router.get('/admin/getRidersList',async(req,res)=>{
    db.query(`SELECT name AS deliveryBoyName,phone AS deliveryBoyPhone FROM delivery_boy `,(err,result)=>{
-       if(err) throw err;
+       if(err) console.log(err);
        else{res.send(result);}
    })
 
 })
 router.get('/admin/rider/:id/getOrders',async(req,res)=>{
     db.query(`SELECT * FROM orders WHERE deliveryBoy=${req.params.id}`,(err,result)=>{
-        if(err) throw err;
+        if(err) console.log(err);
         else{
             console.log(result)
             res.send(result);
@@ -710,7 +710,7 @@ router.get('/admin/rider/:id/getOrders',async(req,res)=>{
 })
 router.post('/admin/getRidersList',async(req,res)=>{
     db.query(`INSERT INTO delivery_boy(name,phone) VALUES ("${req.body.deliveryBoyName}","${req.body.deliveryBoyPhone}")`,(err,result)=>{
-        if(err) throw err;
+        if(err) console.log(err);
         else{res.send({message:"SUCCESS"});}
     })
     
@@ -719,7 +719,7 @@ router.post('/admin/getRidersList',async(req,res)=>{
 router.delete('/admin/getRidersList/:phone',async(req,res)=>{
     try{
         db.query(`DELETE FROM delivery_boy WHERE phone="${req.params.phone}"`,(err,result)=>{
-            if(err) throw err;
+            if(err) console.log(err);
             else res.send({message:"SUCCESS"});
         })
     }
@@ -750,7 +750,7 @@ router.post('/rider/login/:phone/:registrationToken',async(req,res)=>{
             }
             else if(r[0].phone!=null){
                 db.query(`UPDATE delivery_boy SET registrationToken="${req.params.registrationToken}" WHERE phone = "${req.params.phone}"`,(err,result)=>{
-                    if(err) throw err;
+                    if(err) console.log(err);
             
                     else  res.send({message:r[0].DbID});
                     console.log(r[0]);
