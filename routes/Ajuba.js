@@ -38,7 +38,7 @@ const upload=multer({
     
     
     limits:{
-        fileSize:15000000
+        fileSize:2000000
     },
     fileFilter(req,file,cb){
         if(!file.originalname.match(/\.(jpg|png|JPG|PNG|JPEG|jpeg|png)$/)){
