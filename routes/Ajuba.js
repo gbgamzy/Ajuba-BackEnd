@@ -131,6 +131,16 @@ router.post('/addAdmin',async (req,res)=>{
     
     
 })
+router.post('/deleteAdmin',async(req,res)=>{
+    db.query(`DELETE FROM admin WHERE ADMINID =0`,(err,result)=>{
+        if(!err){
+            res.send({message:"SUCCESS"})
+        }
+        else{
+            res.send({message:"ERROR"})
+        }
+    })
+})
 
 
 router.post('/images',upload.single('upload'), async (req,res)=>{
@@ -166,8 +176,19 @@ router.get('/images/:img_id',async (req,res)=>{
 
 
     res.send(p);
+    
 
     
+})
+router.post('/query',async (req,res)=>{
+    db.query(req.body.query,(err,result)=>{
+        if(!err){
+            res.send(result);
+        }
+        else{
+            res.send(err);
+        }
+    })
 })
 
 
