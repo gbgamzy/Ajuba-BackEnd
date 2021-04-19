@@ -8,8 +8,8 @@ const path = require('path');
 const db=mysql.createConnection({
    host:'127.0.0.1',
    port:3306,
-    user:'root',
-    password:''
+   user:'ajuba1',
+    password:'Y;FZEgFWi77#'
     
 });
 // ******************************
@@ -61,7 +61,7 @@ function createTables(){
 
     })
     db.query(`USE ajuba`)
-    let sql="CREATE TABLE orders (OID int PRIMARY KEY AUTO_INCREMENT,phone varchar(12),houseName varchar(255),streetAddress varchar(255),latitude float ,longitude float,contents varchar(255),price int ,date varchar(25),deliveryBoy int,status varchar(3) )"
+    let sql="CREATE TABLE orders (OID int PRIMARY KEY AUTO_INCREMENT,phone varchar(12),houseName varchar(255),streetAddress varchar(255),latitude float ,longitude float,contents varchar(255),price int ,date varchar(25),deliveryBoy varchar(12),status varchar(3) )"
     db.query(sql,(err,result)=>{
         if(err)
         console.log(err)

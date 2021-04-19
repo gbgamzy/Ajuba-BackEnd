@@ -8,17 +8,13 @@ var fs = require("fs");
 
 const base=path.resolve('.')
 
-
-
 const db=mysql.createConnection({
     host:'127.0.0.1',
     port:3306,
-     user:'root',
-     password:'',
+    user:'ajuba1',
+    password:'Y;FZEgFWi77#',
      database:'ajuba'
  });
-
-
 
 
 
@@ -478,17 +474,7 @@ router.post('/processOrder/:id',async(req,res)=>{
                 res.send({message:"ERROR"})
             }
             else {
-                db.query(`SELECT * FROM orders WHERE OID=${req.params.id}`,(err1,result1)=>{
-                    if(err) res.send({message:"ERROR"})
-                    else{
-                        
-                        db.query(`SELECT * FROM customer WHERE phone="${result1[0].phone}"`,(err2,result2)=>{
-                            
-                            notifyCustomer("Order out for delivery.",`Your order containing ${result1[0].contents} is out for delivery. `,result2[0].registrationToken)
-                        })
-                        
-                    }
-                })
+                
                 
                 notifyRiders()
                 res.send({message:"SUCCESS"});}
