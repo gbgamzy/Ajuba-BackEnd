@@ -14,6 +14,7 @@
     "fcm-node": "^1.5.2",
     "firebase-admin": "^9.5.0",
     "firebase-functions": "^3.13.1",
+    "logger": "^0.0.1",
     "mongoose": "^5.10.14",
     "multer": "^1.4.2",
     "multer-gridfs-storage": "^4.2.0",

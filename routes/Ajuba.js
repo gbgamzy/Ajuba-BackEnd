@@ -8,13 +8,46 @@ var fs = require("fs");
 
 const base=path.resolve('.')
 
-const db=mysql.createConnection({
-    host:'127.0.0.1',
+var db_config = {
+  host:'127.0.0.1',
     port:3306,
     user:'ajuba1',
     password:'Y;FZEgFWi77#',
      database:'ajuba'
- });
+};
+var db;
+var error;
+
+var logger = require('../logger').createLogger(); // logs to STDOUT
+var logger = require('../logger').createLogger('development.log'); // logs to a file
+
+
+function handleDisconnect() {
+  db = mysql.createPool(db_config); // Recreate the connection, since
+                                                  // the old one cannot be reused.
+
+                                   // If you're also serving http, display a 503 error.
+  db.on('error', function(err) {
+    console.log('db error', err);
+    // Connection to the MySQL server is usually
+    handleDisconnect();                         // lost due to either server restart, or a
+    error=err;
+  });
+  var d="";
+  db.query(`INSERT INTO logs(log,date) VALUES("AJUBA ${error}",NOW())`,(result,err)=>{
+      if(err){
+          console.log(err)
+          
+      }
+      
+  });
+  
+}
+
+handleDisconnect();
+
+
+
 
 
 
@@ -46,17 +79,23 @@ const upload=multer({
 
 })
 function sendPushNotification(message){
-    admin.messaging().send(message).then((response)=>{
-        console.log("sent")
-        console.log(response)
+    try{admin.messaging().send(message).then((response)=>{
+        console.log("response:"+response);
+        console.log(response);
+        return response;
     }).catch((err)=>{
 
-        console.log(err)
-    })
+        return err;
+    })}
+    catch(err){
+        console.log(err);
+    }
 }
+
+
 function notificationAdmin(title,body){
     db.query(`SELECT * FROM admin WHERE ADMINID=0`,(err,result)=>{
-        console.log(result[0].registrationToken)
+        
         const m={
             
             data:{
@@ -66,13 +105,43 @@ function notificationAdmin(title,body){
             token:result[0].registrationToken
                
         };
-        sendPushNotification(m);
+        for(i=0;i<5;i++){
+            console.log("notify admin");
+            var x=sendPushNotification(m);
+        console.log(x);
+        }
+        
+        
     })
     
 }
+
+function notifyPhone(title,body,phone){
+    try{
+        db.query(`SELECT * FROM customer WHERE phone ="${phone}"`,(err,result)=>{
+            if(err){
+                console.log("ERROR1");
+                console.log(err);
+                
+                return err;
+            }
+            else{
+                var x = notifyCustomer(title,body,result[0].registrationToken);
+               
+                return x;
+            }
+        })
+    }
+    catch(err){
+        console.log("ERROR2");
+        console.log(err);
+        return err;
+        
+    }
+}
 function notifyCustomer(title,body,token){
-    console.log("notifyCutomer Token")
-    console.log(token)
+    try{
+    
 
     const m={
         data:{
@@ -83,99 +152,135 @@ function notifyCustomer(title,body,token){
         
     };
     sendPushNotification(m);
+        
+    }
+    catch(err){
+        return err;
+    }
 
 }
-function notifyRiders(){
-    const title="New Order to accept"
-    const body="There's a new order to accept"
-    db.query(`SELECT * FROM delivery_boy`,(err,result)=>{
-        if(err) console.log(err);
-        else{
-            result.forEach(element => {
+function notifyRider(p){
+    try{
+        
+        db.query(`SELECT registrationToken FROM delivery_boy WHERE phone=${p}`,(err,result)=>{
+            
+            const title="New Order to accept"
+            const body="There's a new order to accept"
+            if(err) console.log(err);
+            else{
+
                 const m={
-                    data:{
+                data:{
                         title:title,
                         body:body
                     },
-                    token:element.registrationToken,
-                       android: {
-                        notification: {
-                            sound: "alert.mp3",
-                            channel_id:'AjubaRider_notification_id'
-                        }
-                    }
+                    token:result[0].registrationToken
                 };
-                sendPushNotification(m);
-            
-                
-            });
-        }
-    })
+        
+        sendPushNotification(m);
+            }
+        })
+    }
+    catch(err){
+        console.log(err);
+    }
 }
-
-router.post('/addAdmin',async (req,res)=>{
-    console.log(req.body);
-    db.query(`INSERT INTO admin (phone,latitude,longitude) VALUES ("${req.body.phone}",${req.body.latitude},${req.body.longitude})`,(err,result)=>{
-        if(err)
-        {
+function notifyRiders(){
+    try{const title="New Order to accept"
+    const body="There's a new order to accept"
+    db.query(`SELECT * FROM delivery_boy`,(err,result)=>{
+        if(err) res.send({error:err});
+        else{
             
-        console.log(err)}
-        else{
-        console.log(result)
-        res.send("SUCCESS")}
-    })
+        
+        var reg=[];
+        result.forEach(element=>{
+            if(element.registrationToken!=null){
+            reg.push(element.registrationToken);
+            const m={
+                data:{
+                        title:title,
+                        body:body
+                    },
+                    token:element.registrationToken
+                };
+        for(i=0;i<5;i++){
+            console.log("notify rider");
+            var x=sendPushNotification(m);
+            console.log(x);
+        }
+        
+            }
+        
+        
+        
+        
+            
+        });
+        
+        
+        
+             /*admin.messaging().sendMulticast(m)
+                .then((response) => {
+                    console.log(response.successCount + ' messages were sent successfully');
+                });*/
+        return "m"; 
+        
+        }
+        
+        
+    })}
+    catch(err){
+        return err;
+    }
+}
+router.post('/notifyRider',async(req,res)=>{
+    notifyRider(req.body.phone);
+})
+router.post('/notifyPhone',(req,res)=>{
+    try{
+        
+        var x=notifyPhone(req.body.title,req.body.body,req.body.phone)
+        res.send(x)
+        
+        
+        
+        
+    }
+    catch(err){
+        res.send({error:err});
+    }
+    
+    
+    
+});
+router.post('/notifyCustomer',(req,res)=>{
+    try{
+        
+        
+        var x=notifyCustomer(req.body.title,req.body.body,req.body.token)
+        res.send(x)
+        
+        
+        
+        
+    }
+    catch(err){
+        res.send({error:err});
+    }
+    
     
     
 })
-router.post('/deleteAdmin',async(req,res)=>{
-    db.query(`DELETE FROM admin WHERE ADMINID =0`,(err,result)=>{
-        if(!err){
-            res.send({message:"SUCCESS"})
-        }
-        else{
-            res.send({message:"ERROR"})
-        }
-    })
-})
+
 
 
 router.post('/images',upload.single('upload'), async (req,res)=>{
-    console.log(req.file);
-    console.log(req.body.id);
-    console.log(req.file.filename);
+    
     res.send({message:req.file.filename})
     
 })
 
-router.delete('/images/:id',async(req,res)=>{
-    db.query(`DELETE FROM images WHERE name="${req.params.id}" `,(err,result)=>{
-        if(err) res.send({message:"ERROR"});
-        else{
-            try{fs.unlinkSync(base+"/uploads/"+req.params.id)
-                res.send({message:"SUCCESS"})
-        }
-            catch(err1){
-                console.log(err1);
-                res.send({message:"ERROR"})
-            } 
-        }
-    })
-
-    console.log("delete"+req.params.id)
-})
-router.get('/images/:img_id',async (req,res)=>{
-
-
-    
-    const p=fs.readFileSync(base+"/uploads/"+req.params.img_id)
-    res.set('Content-Type','image/jpg');
-
-
-    res.send(p);
-    
-
-    
-})
 router.post('/query',async (req,res)=>{
     db.query(req.body.query,(err,result)=>{
         if(!err){
@@ -185,6 +290,36 @@ router.post('/query',async (req,res)=>{
             res.send(err);
         }
     })
+})
+
+
+router.delete('/images/:id',async(req,res)=>{
+    db.query(`DELETE FROM images WHERE name="${req.params.id}" `,(err,result)=>{
+        if(err) res.send({message:"ERROR"});
+        else{
+            try{fs.unlinkSync(base+"/uploads/"+req.params.id)
+                res.send({message:"SUCCESS"})
+        }
+            catch(err1){
+                
+                res.send({message:"ERROR"})
+            } 
+        }
+    })
+
+    
+})
+router.get('/images/:img_id',(req,res)=>{
+
+
+    
+    const p=fs.readFileSync(base+"/uploads/"+req.params.img_id)
+    res.set('Content-Type','image/jpg');
+
+
+    res.send(p);
+
+    
 })
 
 
@@ -202,7 +337,7 @@ router.get('/getAdmin',async(req,res)=>{
     try{
         db.query("SELECT * FROM admin",(err,result,fields)=>{
             if(err) console.log(err);
-            console.log(result[0])
+            console.log("getAdmin");
             res.send(result[0])
         })
     }
@@ -212,27 +347,27 @@ router.get('/getAdmin',async(req,res)=>{
     }
 })
 
-router.post('/customer/:phone/:registrationToken',async(req,res)=>{
+router.post('/customer/:phone/:registrationToken/:name',async(req,res)=>{
     try{
-        console.log(req.params)
         
-       db.query(`SELECT * FROM customer`,(err,result)=>{
+        
+       db.query(`SELECT * FROM customer WHERE phone="${req.params.phone}"`,(err,result)=>{
            if(result.length>0){
-               db.query(`UPDATE customer SET registrationToken="${req.params.registrationToken}" WHERE phone="${req.params.phone}"`,(err1,result1)=>{
+               db.query(`UPDATE customer SET registrationToken="${req.params.registrationToken}",name="${req.params.name}" WHERE phone="${req.params.phone}"`,(err1,result1)=>{
                    if(!err1){
-                       console.log(result1+req.params.phone)
+                       
                        res.send({message:"SUCCESS"})
                    }
                })
            }
            else{
-               db.query(`INSERT INTO customer (phone,registrationToken,successCount,successPrice,failureCount,failurePrice)
-                VALUES("${req.params.phone}","${req.params.registrationToken}",0,0,0,0)`,(err2,result2)=>{
+               db.query(`INSERT INTO customer (name,phone,registrationToken,successCount,successPrice,failureCount,failurePrice)
+                VALUES("${req.params.name}","${req.params.phone}","${req.params.registrationToken}",0,0,0,0)`,(err2,result2)=>{
                 if(err2) {res.send({message:"ERROR"})
                     console.log(err2)
             }
                 else{
-                    console.log(req.params.phone+result2)
+                    
                     res.send({message:"SUCCESS"})
                 }
             })
@@ -274,9 +409,7 @@ router.get('/customer/food',async(req,res)=>{
 })
 router.get('/customer/:phone/orders',async(req,res)=>{
     try{
-        db.query(`SELECT orders.contents AS contents,orders.OID AS OID ,orders.price AS price,orders.date AS date,orders.status AS status,
-        delivery_boy.phone AS deliveryBoyPhone FROM orders LEFT JOIN delivery_boy ON orders.deliveryBoy=delivery_boy.DbID
-        WHERE orders.phone = "${req.params.phone}"`,(err,result)=>{
+        db.query(`SELECT * FROM orders WHERE phone = "${req.params.phone}"`,(err,result)=>{
             if(err) console.log(err);
             res.send(result)
         })
@@ -292,7 +425,7 @@ router.get('/customer/rider/:phone',async (req,res)=>{
         db.query(`SELECT *FROM delivery_boy WHERE phone = "${req.params.phone}"`,(err,result)=>{
             if(err) console.log(err);
 
-            console.log(result[0])
+            
             res.send(result[0])
         })
     }
@@ -306,15 +439,16 @@ router.post('/placeOrder/:phone',async(req,res)=>{
 
 
 
-            
-    
-            db.query(`INSERT INTO orders(contents,phone,price,date,status,houseName,streetAddress,latitude,longitude)
-             VALUES ("${req.body.contents}","${req.params.phone}",
+            console.log("order");
+            console.log(req.body);
+            db.query(`INSERT INTO orders(contents,name,phone,price,date,status,houseName,streetAddress,latitude,longitude)
+             VALUES ("${req.body.contents}","${req.body.name}","${req.params.phone}",
              ${req.body.price},
              "${req.body.date}","A","${req.body.houseName}","${req.body.streetAddress}",
              ${req.body.latitude},${req.body.longitude})`,(err1,result1)=>{
                 if(err1) res.send({message:"ERROR"});
                 else{
+                    console.log(req.body);
                     notificationAdmin("New Order","A Pending order containing "+req.body.contents);
                 res.send({message:"SUCCESS"});}
             })
@@ -330,14 +464,22 @@ router.post('/placeOrder/:phone',async(req,res)=>{
 // Admin Side
 
 router.post('/admin/:phone/:registrationToken',async(req,res)=>{
+    
     try{
         
-        db.query(`SELECT * FROM admin WHERE phone = "${req.params.phone}"`,(e,r)=>{
+        
+        db.query(`SELECT * FROM admin WHERE ADMINID=0`,(e,r)=>{
             if(e) {
                 console.log(e)
-                res,send({message:"ERROR"});
+                res.send({message:"ERROR"});
             }
-            else if(r[0].phone!=null){
+            
+            
+            else{
+                
+            
+            
+            if(r[0].phone==req.params.phone){
                 db.query(`UPDATE admin SET registrationToken="${req.params.registrationToken}" WHERE phone = "${req.params.phone}"`,(err,result)=>{
                     if(err) console.log(err);
             
@@ -349,17 +491,13 @@ router.post('/admin/:phone/:registrationToken',async(req,res)=>{
             else{
                 res.send({message:"ERROR"});
             }
+                
+            }
+                
+            
 
         })
-    
-    
-           
 
-
-        
-        
-
-        
     }
     catch(err){
         res.json({message:"ERROR"});
@@ -367,11 +505,20 @@ router.post('/admin/:phone/:registrationToken',async(req,res)=>{
     }
 
 })
+router.post('/admin/logout',async(req,res)=>{
+    
+    db.query(`UPDATE admin SET registrationToken="" WHERE ADMINID=0`,(err,result)=>{
+                    if(err) console.log(err);
+            
+                    else  res.send({message:"SUCCESS"});
+            
+                })
+})
 router.post('/admin/phone',async(req,res)=>{
     try{
     db.query(`UPDATE admin SET phone = ${req.body.phone} WHERE phone = ${req.body.oldPhone} `,(err,result)=>{
         if(err) console.log(err);
-            console.log(result)
+            
     })
         res.send({message:"SUCCESS"});
 }
@@ -391,7 +538,7 @@ router.post('/admin/rider',async(req,res)=>{
 
             else{
                 res.json({message:"SUCCESS"});
-                console.log(result)
+                
             }
             
         })
@@ -437,7 +584,7 @@ router.get('/admin/getDetails/:phone',async(req,res)=>{
 
 router.post('/acceptOrder/:id',async(req,res)=>{
     try{
-        db.query(`UPDATE orders SET status="B" WHERE OID = ${req.params.id}`,(err,result)=>{
+        db.query(`UPDATE orders SET status="B",deliveryBoy="${req.body.deliveryBoy}" WHERE OID = ${req.params.id}`,(err,result)=>{
             if(err){
                 res.send({message:"ERROR"})
             }
@@ -446,38 +593,74 @@ router.post('/acceptOrder/:id',async(req,res)=>{
                     if(err) res.send({message:"ERROR"})
                     else{
                         
-                        db.query(`SELECT * FROM customer WHERE phone="${result1[0].phone}"`,(err2,result2)=>{
-                            console.log("result")
-                            console.log(result1)
-                            console.log(result2)
-                            notifyCustomer("Order out for delivery.",`Your order containing ${result1[0].contents} is out for delivery. `,result2[0].registrationToken)
-                        })
+                        
+                            
+                            notifyPhone("Out for delivery.",`Your order containing ${result1[0].contents} is out for delivery. `,result1[0].phone)
+                            
+                        
+                        
                         
                     }
                 })
-                notifyRiders()
                 
-                res.send({message:"SUCCESS"});}
-        })
-        
-    }
+                
+                
+                }
+    })}
     catch(err){
 
         console.log(err);
         res.send({message:"ERROR"});
     }
 })
-router.post('/processOrder/:id',async(req,res)=>{
+router.post('/setRider/:id',async(req,res)=>{
+    try{
+        db.query(`UPDATE orders SET deliveryBoy="${req.body.deliveryBoy}" WHERE OID = ${req.params.id}`,(err,result)=>{
+            
+            notifyRider(req.body.deliveryBoy);
+            if(err){
+                
+                res.send({message:"ERROR"})
+            }
+            else{
+                res.send({message:"SUCCESS"});
+            }
+    })}
+    catch(err){
+
+        console.log(err);
+        res.send({message:"ERROR"});
+    }
+})
+router.post('/processOrder/:id',(req,res)=>{
     try{
         db.query(`UPDATE orders SET status="A2" WHERE OID = ${req.params.id}`,(err,result)=>{
             if(err){
                 res.send({message:"ERROR"})
             }
             else {
+                db.query(`SELECT * FROM orders WHERE OID=${req.params.id}`,(err1,result1)=>{
+                    if(err) res.send({message:"ERROR"})
+                    else{
+                        
+                        
+                            
+                            notifyPhone("Order has been accepted.",`Your order containing ${result1[0].contents} has been accepted. `,result1[0].phone);
+                            
+                            res.send({message:"SUCCESS"});
+                            
+                            
+                       
+                        
+                        
+                    }
+                })
                 
                 
-                notifyRiders()
-                res.send({message:"SUCCESS"});}
+                
+                
+                
+                }
         })
         
         
@@ -513,14 +696,10 @@ router.get('/admin/getRiders',async(req,res)=>{
 
 router.post('/rejectOrder/:id',async(req,res)=>{
     try{
-        console.log(req.params)
+        
 
        
-                db.query(`DELETE FROM orders WHERE OID=${req.params.id}`,(err1,result1)=>{
-                    if(err1){
-                        res.send({message:"ERROR"})
-                    }
-                    else{
+                
 
 
                         db.query(`SELECT * FROM orders WHERE OID=${req.params.id}`,(err,result)=>{
@@ -528,19 +707,25 @@ router.post('/rejectOrder/:id',async(req,res)=>{
                                 console.log(err)
                                 res.send({message:"ERROR"})}
                             else{
-                                console.log(result);
-                                // db.query(`SELECT * FROM customer WHERE phone="${result[0].phone}"`,(err2,result2)=>{
-                                //     if(!err2){
-                                //         console.log(result2)
-                                //         notifyCustomer("Order Rejected.",`Your order containing ${result.contents} has not been accepted. `,result2[0].registrationToken);
-                                //     }
-                                // })
+                                
+                                db.query(`DELETE FROM orders WHERE OID=${req.params.id}`,(err1,result1)=>{
+                                    if(err1){
+                                    res.send({message:"ERROR"})
+                                    }
+                                })
+                                    
+                                
+                                         
+                                         notifyPhone("Order Rejected.",`Your order containing ${result[0].contents} has not been accepted. `,result[0].phone);
+                                     
+                                 
                                 
                             }
                         })
+                        
                         res.send({message:"SUCCESS"})
-                    }
-                })
+                    
+                
             
         
     }
@@ -572,14 +757,27 @@ router.get('/admin/getProcessingOrders',async(req,res)=>{
 
 
     try{
-        db.query(`SELECT orders.OID AS OID,orders.phone AS phone,orders.contents AS contents,orders.price AS price,
-        orders.date AS date,orders.status As status,orders.streetAddress AS streetAddress,orders.latitude AS latitude,
-        orders.longitude AS longitude,
+        console.log("getProcessing Orders");
+        db.query(`SELECT * FROM orders
+        WHERE status="A2"`,(err,result)=>{
+            if(err){
+                console.log(err);
+            }
+            else
+            {
+            res.send(result)}
+        })
+    }
+    catch(err){
+        console.log(err);
+    }
+});
+router.get('/admin/getDispatchedOrders',async(req,res)=>{
 
-        delivery_boy.name AS deliveryBoyName,delivery_boy.phone AS deliveryBoyPhone FROM orders 
-        
-        LEFT JOIN delivery_boy ON orders.deliveryBoy=delivery_boy.DbID
-        WHERE orders.status="A2"`,(err,result)=>{
+
+    try{
+        db.query(`SELECT * FROM orders
+        WHERE status="B"`,(err,result)=>{
             if(err){
                 console.log(err);
             }
@@ -592,7 +790,25 @@ router.get('/admin/getProcessingOrders',async(req,res)=>{
         console.log(err);
     }
 })
-
+router.get('/admin/orders/:day/:month/:year',async(req,res)=>{
+    try{
+        var date="" 
+        
+        date=req.params.day+" "+req.params.month+" "+req.params.year;
+        console.log(date)
+        db.query(`SELECT * FROM orders WHERE date LIKE '${date}%' AND (status='C' OR status='D')  `,(err,result)=>{
+            if(err){
+                console.log(err)
+                
+            }
+            
+            res.send(result);
+        })
+    }
+    catch(err){
+        console.log(err);
+    }
+})
 router.post('/admin/foodMenu/category/:category',async(req,res)=>{
 
     try{
@@ -643,14 +859,22 @@ router.delete('/admin/foodMenu/category/:category',async(req,res)=>{
         console.log(err);
     }
 })
+router.post('/admin/foodMenu/:fuid/1',(req,res)=>{
+    
+   db.query(`UPDATE food_unit SET available=1 WHERE FUID=${req.params.fuid}`) 
+});
+router.post('/admin/foodMenu/:fuid/0',(req,res)=>{
+    
+   db.query(`UPDATE food_unit SET available=0 WHERE FUID=${req.params.fuid}`) 
+});
 router.post('/admin/foodMenu/:category/food',async(req,res)=>{
 
     try{
-        console.log(req.body.image);
+        
 
-        db.query(`INSERT INTO food_unit(name,price,image,category) VALUES (
+        db.query(`INSERT INTO food_unit(name,price,image,category,available) VALUES (
             "${req.body.name}",${req.body.price},"${req.body.image}","${req.params.category}"
-        )`,(err,result)=>{
+        ,1)`,(err,result)=>{
             if(err) console.log(err);
             else{
                 res.status(200).send({message:"SUCCESS"})        
@@ -670,7 +894,7 @@ router.delete('/admin/foodMenu/:category/food/:name',async(req,res)=>{
         db.query(`DELETE FROM food_unit WHERE name="${req.params.name}"`,(err,result)=>{
             if(err) res.send({message:"ERROR"});
             else{
-                console.log(result);
+                
                 res.send({message:"SUCCESS"});
             }
         })
@@ -710,7 +934,7 @@ router.get('/admin/rider/:id/getOrders',async(req,res)=>{
     db.query(`SELECT * FROM orders WHERE deliveryBoy=${req.params.id}`,(err,result)=>{
         if(err) console.log(err);
         else{
-            console.log(result)
+            
             res.send(result);
         }
     })
@@ -755,12 +979,16 @@ router.post('/rider/login/:phone/:registrationToken',async(req,res)=>{
             
                 res.send({message:"ERROR"});
             }
+            if(r.length==0){
+                res.send({message:"ERROR"});
+                return;
+            }
             else if(r[0].phone!=null){
                 db.query(`UPDATE delivery_boy SET registrationToken="${req.params.registrationToken}" WHERE phone = "${req.params.phone}"`,(err,result)=>{
                     if(err) console.log(err);
             
                     else  res.send({message:r[0].DbID});
-                    console.log(r[0]);
+                    
             
                 })
                 
@@ -782,9 +1010,11 @@ router.post('/rider/login/:phone/:registrationToken',async(req,res)=>{
 
 router.get('/rider/login/:phone',async(req,res)=>{
     try{
+        console.log("getOrders");
         db.query(`SELECT * FROM orders
         WHERE orders.deliveryBoy=${req.params.phone}`,(err,result)=>{
             if(err){
+                console.log(err);
                 res.send({message:"ERROR"})
             }
             else
@@ -806,11 +1036,11 @@ router.post('/rider/:phone/location',async(req,res)=>{
     })
 })
 router.post('/rider/:phone/id/:id/accepted',async(req,res)=>{
-    console.log(req.params)
+    
     db.query(`UPDATE orders SET deliveryBoy=${req.params.phone} WHERE OID = ${req.params.id}`,(err,result)=>{
         if(err) console.log(err);
         else res.send({message:"SUCCESS"})
-        console.log(result)
+        
     })
 })
 router.post('/rider/phone/:phone/id/:id/delivered',async(req,res)=>{
@@ -820,7 +1050,7 @@ router.post('/rider/phone/:phone/id/:id/delivered',async(req,res)=>{
             db.query(`UPDATE customer SET successCount=successCount+1,successPrice=successPrice+${result[0].price} WHERE phone=${result[0].phone}`)
         
         db.query(`UPDATE orders SET status="C" WHERE OID= ${req.params.id}`,(err,result1)=>{
-            console.log(result1)
+            
             if(err) res.send({message:"ERROR"})
             else res.send({message:"SUCCESS"});
         })})
@@ -840,10 +1070,10 @@ router.post('/rider/:phone/:id/declined',async(req,res)=>{
             db.query(`UPDATE customer SET failureCount=failureCount+1,failurePrice=failurePrice+${result[0].price} WHERE phone=${result[0].phone}`)
         
 
-        db.query(`UPDATE orders SET status="D" WHERE OID= ${req.params.id}`,(err,result)=>{
-            if(err) res.send({message:"ERROR"})
+        db.query(`UPDATE orders SET status="D" WHERE OID= ${req.params.id}`,(err2,result2)=>{
+            if(err2) res.send({message:"ERROR"})
             else {
-                notificationAdmin("Order Failed",`Order to be delivered by ${req.params.phone} was fake.`);
+                notificationAdmin("Order Failed",`Order by ${result[0].name} was fake.`);
                 res.send({message:"SUCCESS"});}
         })
     })
